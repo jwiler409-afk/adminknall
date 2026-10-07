@@ -126,6 +126,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     <button class="tab" data-t="ere" data-i="tabEre"></button>
     <button class="tab" data-t="sig" data-i="tabSig"></button>
     <button class="tab" data-t="lab" data-i="tabLab"></button>
+    <button class="tab" data-t="kb" data-i="tabKb"></button>
     <button class="tab" data-t="sante" data-i="tabSante"></button>
   </div>
 
@@ -295,6 +296,29 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     </div>
   </section>
 
+  <!-- Connaissances -->
+  <section id="t-kb" hidden>
+    <div class="card">
+      <h2 data-i="kbTitre"></h2>
+      <p class="mut" data-i="kbDesc"></p>
+      <p class="mut" id="kbCol"></p>
+      <select id="kbAgent" style="width:100%;background:#0d1230;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px"></select>
+      <input id="kbQ" type="text" maxlength="500" data-ph="phKbQ">
+      <textarea id="kbR" maxlength="20000" style="min-height:110px;margin-top:8px" data-ph="phKbR"></textarea>
+      <input id="kbTags" type="text" maxlength="400" style="margin-top:8px" data-ph="phKbTags">
+      <div class="rowb">
+        <button class="btn" id="kbSave" data-i="kbAjouter"></button>
+        <button class="btn sec" id="kbCancel" data-i="kbAnnuler" style="display:none"></button>
+      </div>
+    </div>
+    <div class="card"><h2 data-i="kbListe"></h2><div id="kbListe"></div></div>
+    <div class="card">
+      <h2 data-i="kbImport"></h2><p class="mut" data-i="kbImportDesc"></p>
+      <textarea id="kbImp" style="min-height:110px" data-ph="phKbImp"></textarea>
+      <div class="rowb"><button class="btn sec" id="kbImpBtn" data-i="kbImporter"></button></div>
+    </div>
+  </section>
+
   <!-- Santé -->
   <section id="t-sante" hidden>
     <div class="card"><h2 data-i="cles"></h2><div id="cles"></div></div>
@@ -397,6 +421,18 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     regMax:["Longueur maximale de la réponse (en jetons, 0 = par défaut)","Longè maksimòm repons lan (an token, 0 = pa defo)"],
     regConseil:["Astuce : 300 jetons ≈ 200 mots. Une règle courte et claire marche mieux qu'un long texte.","Konsèy: 300 token ≈ 200 mo. Yon règ kout epi klè mache pi byen pase yon long tèks."],
     tabLab:["Laboratoire","Laboratwa"],
+    tabKb:["Connaissances","Konesans"], kbTitre:["Connaissances partagées","Konesans pataje"],
+    kbDesc:["Ce que Knall sait pour chaque agent. Les ajouts passent par le serveur.","Sa Knall konnen pou chak ajan. Ajou yo pase pa sèvè a."],
+    kbCollection:["Collection","Koleksyon"], phKbQ:["Question ou mot","Kesyon oswa mo"], phKbR:["Réponse","Repons"],
+    phKbTags:["Mots-clés séparés par des virgules (facultatif)","Mo kle separe ak vigil (si ou vle)"],
+    kbAjouter:["Ajouter","Ajoute"], kbEnreg:["Enregistrer","Anrejistre"], kbModifier:["Modifier","Modifye"], kbAnnuler:["Annuler","Anile"],
+    kbListe:["Éléments de cet agent","Eleman ajan sa a"], kbVide:["Aucune connaissance pour cet agent.","Pa gen konesans pou ajan sa a."],
+    kbConfSupp:["Supprimer cette connaissance ?","Efase konesans sa a?"], kbSauve:["Enregistré","Anrejistre"], kbSupprime:["Supprimé","Efase"],
+    kbChamps:["Question et réponse obligatoires.","Kesyon ak repons obligatwa."],
+    kbImport:["Importer une liste","Enpòte yon lis"],
+    kbImportDesc:["Colle une liste JSON (question, reponse, tags) ou un dictionnaire mot → définition.","Kole yon lis JSON (question, reponse, tags) oswa yon diksyonè mo → definisyon."],
+    phKbImp:["Colle le JSON ici","Kole JSON an isit la"], kbImporter:["Importer","Enpòte"], kbImporte:["éléments importés","eleman enpòte"], kbJsonBad:["JSON illisible ou vide.","JSON pa lizib oswa vid."],
+    
     labTest:["Test rapide","Tès rapid"],
     labDesc:["Essayez Knall sans toucher aux vrais utilisateurs. Les tests utilisent de vrais fournisseurs IA (jetons).","Eseye Knall san w pa touche vrè itilizatè yo. Tès yo itilize vrè founisè AI (token)."],
     verActuel:["Règles actuelles","Règ aktyèl"],
@@ -839,11 +875,100 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
   $("soti").onclick = function(){ deconnecte(""); $("tok").value = ""; };
   $("rafre").onclick = function(){ charge(); };
 
+  /* ---------- Connaissances partagées (écrites par le serveur, pas par les apps) ---------- */
+  var kb = { agent: "general", items: [], editId: null };
+  function kbVider(){
+    $("kbQ").value = ""; $("kbR").value = ""; $("kbTags").value = ""; kb.editId = null;
+    $("kbSave").setAttribute("data-i", "kbAjouter"); $("kbSave").textContent = t("kbAjouter"); $("kbCancel").style.display = "none";
+  }
+  function kbErreur(e){ if(e && e.message === "401"){ deconnecte(t("tokenExp")); } else { toast((e && e.message) || "Erreur"); } }
+  async function chargeKB(){
+    try{
+      var c = await api("/admin/knowledge");
+      var agents = Object.keys(c.comptes || {}); if(!agents.length) agents = ["general","taches","code","recherche"];
+      $("kbCol").textContent = t("kbCollection") + " : " + c.collection;
+      var sel = $("kbAgent"); sel.innerHTML = "";
+      agents.forEach(function(a){
+        var o = document.createElement("option"); o.value = a;
+        o.textContent = (({ general: "Général", taches: "Tâches", code: "Code", recherche: "Recherche", redaction: "Rédaction" })[a] || a) + (c.comptes && c.comptes[a] != null ? " (" + c.comptes[a] + ")" : "");
+        sel.appendChild(o);
+      });
+      if(agents.indexOf(kb.agent) < 0) kb.agent = agents[0];
+      sel.value = kb.agent;
+      await chargeKBListe();
+    }catch(e){ kbErreur(e); }
+  }
+  async function chargeKBListe(){
+    var d = await api("/admin/knowledge?agent=" + encodeURIComponent(kb.agent));
+    kb.items = (d.items || []).slice().sort(function(a, b){ return String(a.question).localeCompare(String(b.question), "fr"); });
+    var box = $("kbListe"); box.innerHTML = "";
+    if(!kb.items.length){ var v = document.createElement("span"); v.className = "mut"; v.textContent = t("kbVide"); box.appendChild(v); return; }
+    kb.items.forEach(function(it){
+      var c = document.createElement("div"); c.className = "err";
+      var q = document.createElement("div"); q.style.fontWeight = "700"; q.textContent = it.question;
+      var rep = String(it.reponse || ""); var r = document.createElement("div"); r.textContent = rep.length > 200 ? rep.slice(0, 200) + "…" : rep;
+      var g = document.createElement("small"); g.textContent = (it.tags || []).join(", ");
+      var row = document.createElement("div"); row.className = "rowb";
+      var be = document.createElement("button"); be.type = "button"; be.className = "btn sec lang"; be.textContent = t("kbModifier");
+      be.onclick = function(){
+        kb.editId = it.id; $("kbQ").value = it.question; $("kbR").value = it.reponse; $("kbTags").value = (it.tags || []).join(", ");
+        $("kbSave").setAttribute("data-i", "kbEnreg"); $("kbSave").textContent = t("kbEnreg"); $("kbCancel").style.display = "";
+        try{ window.scrollTo({ top: 0, behavior: "smooth" }); }catch(e){}
+      };
+      var bd = document.createElement("button"); bd.type = "button"; bd.className = "btn red lang"; bd.textContent = t("supprimer");
+      bd.onclick = async function(){
+        if(!confirm(t("kbConfSupp"))) return;
+        try{ await api("/admin/knowledge/supprimer", { method: "POST", body: { agent: kb.agent, id: it.id } }); toast(t("kbSupprime")); if(kb.editId === it.id) kbVider(); await chargeKB(); }catch(e){ kbErreur(e); }
+      };
+      row.append(be, bd); c.append(q, r, g, row); box.appendChild(c);
+    });
+  }
+  $("kbAgent").onchange = async function(){ kb.agent = $("kbAgent").value; kbVider(); try{ await chargeKBListe(); }catch(e){ kbErreur(e); } };
+  $("kbCancel").onclick = kbVider;
+  $("kbSave").onclick = async function(){
+    var q = $("kbQ").value.trim(), r = $("kbR").value.trim();
+    if(!q || !r){ toast(t("kbChamps")); return; }
+    var b = $("kbSave"); b.disabled = true;
+    try{
+      await api("/admin/knowledge", { method: "POST", body: { agent: kb.agent, id: kb.editId || undefined, question: q, reponse: r,
+        tags: $("kbTags").value.split(",").map(function(s){ return s.trim(); }).filter(Boolean) } });
+      toast(t("kbSauve")); kbVider(); await chargeKB();
+    }catch(e){ kbErreur(e); }
+    b.disabled = false;
+  };
+  function kbLire(txt){
+    var d = JSON.parse(txt);
+    if(!Array.isArray(d) && d && typeof d === "object"){
+      var l = ["items","entries","connaissances","knowledge","faq","data"].map(function(k){ return d[k]; }).find(Array.isArray);
+      d = l || Object.keys(d).map(function(k){ return { question: k, reponse: d[k], tags: [k] }; });
+    }
+    if(!Array.isArray(d)) return [];
+    return d.map(function(x){
+      if(!x || typeof x !== "object") return null;
+      var q = x.question || x.q || x.mot || x.term, r = x.reponse || x["réponse"] || x.answer || x.r || x.definition;
+      if(typeof q !== "string" || typeof r !== "string") return null;
+      return { question: q.trim().slice(0, 500), reponse: r.trim().slice(0, 20000), tags: Array.isArray(x.tags) ? x.tags : [] };
+    }).filter(function(x){ return x && x.question && x.reponse; });
+  }
+  $("kbImpBtn").onclick = async function(){
+    var liste; try{ liste = kbLire($("kbImp").value); }catch(e){ liste = []; }
+    if(!liste.length){ toast(t("kbJsonBad")); return; }
+    var b = $("kbImpBtn"); b.disabled = true; var n = 0;
+    try{
+      for(var i = 0; i < liste.length; i += 300){
+        var r = await api("/admin/knowledge/import", { method: "POST", body: { agent: kb.agent, items: liste.slice(i, i + 300) } });
+        n += r.ajoutes || 0;
+      }
+      toast(n + " " + t("kbImporte")); $("kbImp").value = ""; await chargeKB();
+    }catch(e){ kbErreur(e); }
+    b.disabled = false;
+  };
+
   $("tabs").onclick = function(ev){
     var b = ev.target.closest(".tab"); if(!b) return;
-    tabAktif = b.dataset.t; if(tabAktif === "sig"){ chargeSignalements(); } if(tabAktif === "lab"){ chargeLab(); }
+    tabAktif = b.dataset.t; if(tabAktif === "sig"){ chargeSignalements(); } if(tabAktif === "lab"){ chargeLab(); } if(tabAktif === "kb"){ chargeKB(); }
     document.querySelectorAll(".tab").forEach(function(x){ x.classList.toggle("on", x === b); });
-    ["apesi","kontwol","ere","sig","lab","sante"].forEach(function(n){ $("t-" + n).hidden = (n !== tabAktif); });
+    ["apesi","kontwol","ere","sig","lab","kb","sante"].forEach(function(n){ $("t-" + n).hidden = (n !== tabAktif); });
   };
 
   $("sove").onclick = async function(){
