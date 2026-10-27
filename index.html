@@ -5,8 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0e1f">
 <title>Knall Admin</title>
+<script>try{var _t=localStorage.getItem("knall-admin-theme");if(_t==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
 <style>
-:root{--bg:#0a0e1f;--card:#121833;--line:#222a4d;--txt:#e8ebff;--mut:#8f98c4;--ok:#35d07f;--bad:#ff5d6c;--warn:#ffb84d;--acc:#6c7bff}
+:root{--bg:#0a0e1f;--card:#121833;--line:#222a4d;--txt:#e8ebff;--mut:#8f98c4;--ok:#35d07f;--bad:#ff5d6c;--warn:#ffb84d;--acc:#6c7bff;
+  --input-bg:#0d1230;--chip-bg:#1b2347;--alert-bad-bg:#3a1822;--alert-bad-bd:#7a2a3a;--alert-warn-bg:#3a2e14;--alert-warn-bd:#7a5f20}
+:root[data-theme="light"]{--bg:#f4f5fb;--card:#ffffff;--line:#dde0ef;--txt:#171b33;--mut:#555b78;--ok:#1a8f4d;--bad:#c92c39;--warn:#9a5d00;--acc:#3647c9;
+  --input-bg:#eef0f8;--chip-bg:#e7e9f5;--alert-bad-bg:#fde8ea;--alert-bad-bd:#f2b4bb;--alert-warn-bg:#fdf3e0;--alert-warn-bd:#f0cf8a}
+html{transition:background-color .2s}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
@@ -17,14 +22,14 @@ h2{font-size:14px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;lett
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.stat{background:#0d1230;border:1px solid var(--line);border-radius:12px;padding:10px}
+.stat{background:var(--input-bg);border:1px solid var(--line);border-radius:12px;padding:10px}
 .stat b{display:block;font-size:24px}
 .stat span{color:var(--mut);font-size:12px}
-input[type=text],input[type=password],textarea{width:100%;background:#0d1230;border:1px solid var(--line);border-radius:10px;padding:10px;outline:none}
+input[type=text],input[type=password],textarea{width:100%;background:var(--input-bg);border:1px solid var(--line);border-radius:10px;padding:10px;outline:none}
 input:focus,textarea:focus{border-color:var(--acc)}
 textarea{min-height:90px;resize:vertical}
 .btn{border:0;border-radius:10px;padding:10px 14px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600}
-.btn.sec{background:#1b2347;color:var(--txt)}
+.btn.sec{background:var(--chip-bg);color:var(--txt)}
 .btn.red{background:#5a2330}
 .btn:disabled{opacity:.5}
 .tabs{display:flex;gap:6px;margin:12px 0;overflow-x:auto}
@@ -42,13 +47,13 @@ textarea{min-height:90px;resize:vertical}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
 .sw:last-child{border:0}
 .sw input{width:46px;height:26px;accent-color:var(--acc)}
-.err{border-left:3px solid var(--bad);padding:6px 10px;margin:8px 0;background:#0d1230;border-radius:0 8px 8px 0;font-size:13px}
+.err{border-left:3px solid var(--bad);padding:6px 10px;margin:8px 0;background:var(--input-bg);border-radius:0 8px 8px 0;font-size:13px}
 .err small{color:var(--mut)}
 .mut{color:var(--mut);font-size:13px}
 .k{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)}
 .k:last-child{border:0}
 .lang{padding:6px 10px;font-size:13px}
-#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b2347;border:1px solid var(--line);padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--chip-bg);color:var(--txt);border:1px solid var(--line);padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
 #toast.on{opacity:1}
 .alerte{padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px;border:1px solid}
 .alerte.bad{background:#3a1822;border-color:#7a2a3a}
@@ -95,7 +100,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
 <!-- Connexion -->
 <div id="login" class="wrap" style="max-width:420px;padding-top:12vh">
   <div class="card">
-    <div class="row"><h1>⚡ Knall Admin</h1><button class="btn sec lang" id="langL" type="button">KR</button></div>
+    <div class="row"><h1>⚡ Knall Admin</h1><button class="btn sec" id="themeL" type="button" aria-label="Thème">🌙</button><button class="btn sec lang" id="langL" type="button">KR</button></div>
     <p class="mut" data-i="loginSub"></p>
     <p><input id="url" type="text" placeholder="https://knall-1.onrender.com" value="https://knall-1.onrender.com" autocomplete="off" autocapitalize="off"></p>
     <p><button class="btn" id="gBtn" style="width:100%" data-i="google"></button></p>
@@ -114,6 +119,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     <h1>⚡ Knall Admin</h1>
     <div class="row" style="gap:8px">
       <span class="mut" id="maj">—</span>
+      <button class="btn sec" id="themeA" type="button" aria-label="Thème">🌙</button>
       <button class="btn sec lang" id="langA" type="button">KR</button>
       <button class="btn sec" id="rafre" data-i="rafre"></button>
       <button class="btn sec" id="soti" data-i="soti"></button>
@@ -706,6 +712,20 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     appliqueLangue();
   }
   $("langL").onclick = changerLangue; $("langA").onclick = changerLangue;
+
+  function appliqueTheme(){
+    var clair = document.documentElement.getAttribute("data-theme") === "light";
+    var icone = clair ? "☀️" : "🌙";
+    $("themeL").textContent = icone; $("themeA").textContent = icone;
+  }
+  function changerTheme(){
+    var clair = document.documentElement.getAttribute("data-theme") === "light";
+    if(clair){ document.documentElement.removeAttribute("data-theme"); try{ localStorage.setItem("knall-admin-theme", "dark"); }catch(e){} }
+    else{ document.documentElement.setAttribute("data-theme", "light"); try{ localStorage.setItem("knall-admin-theme", "light"); }catch(e){} }
+    appliqueTheme();
+  }
+  $("themeL").onclick = changerTheme; $("themeA").onclick = changerTheme;
+  appliqueTheme();
 
   function toast(m){ var e=$("toast"); e.textContent=m; e.classList.add("on"); setTimeout(function(){ e.classList.remove("on"); }, 2200); }
   function lire(k){ try{ return localStorage.getItem(k) || sessionStorage.getItem(k) || ""; }catch(e){ return ""; } }
